@@ -1,0 +1,274 @@
+datasource db {
+
+  provider = "sqlite"
+
+  url      = "file:./dev.db"
+
+}
+
+
+
+generator client {
+
+  provider = "prisma-client-js"
+
+}
+
+
+
+model User {
+
+  id              String           @id @default(uuid())
+
+  name            String
+
+  username        String           @unique
+
+  password        String
+
+  role            String           @default("SALESMAN") // SUPER_ADMIN, MANAGER, SALESMAN
+
+  permissions     PagePermission[]
+
+  sales           Sale[]
+
+  returns         Return[]
+
+  createdAt       DateTime         @default(now())
+
+}
+
+
+
+model PagePermission {
+
+  id        String  @id @default(uuid())
+
+  userId    String
+
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  pageRoute String  // e.g., "/pos", "/inventory", "/categories", "/installment"
+
+  canAccess Boolean @default(true)
+
+}
+
+
+
+model Category {
+
+  id        String     @id @default(uuid())
+
+  name      String
+
+  parentId  String?
+
+  parent    Category?  @relation("SubCategories", fields: [parentId], references: [id])
+
+  children  Category[] @relation("SubCategories")
+
+  products  Product[]
+
+}
+
+
+
+model Unit {
+
+  id        String    @id @default(uuid())
+
+  name      String    // Meter, Yard, Suit, Piece
+
+  shortCode String    // m, yd, st, pc
+
+  products  Product[]
+
+}
+
+
+
+model Product {
+
+  id                 String      @id @default(uuid())
+
+  name               String
+
+  barcode            String?     @unique
+
+  categoryId         String
+
+  category           Category    @relation(fields: [categoryId], references: [id])
+
+  unitId             String
+
+  unit               Unit        @relation(fields: [unitId], references: [id])
+
+  purchasePrice      Float
+
+  salePrice          Float
+
+  stockQty           Float       // Supports decimals like 12.5 meters
+
+  isOnSale           Boolean     @default(false)
+
+  saleDiscountType   String?     // "FIXED" or "PERCENTAGE"
+
+  saleDiscountValue  Float?
+
+  saleItems          SaleItem[]
+
+  returnItems        ReturnItem[]
+
+  createdAt          DateTime    @default(now())
+
+}
+
+
+
+model Customer {
+  id           String        @id @default(uuid())
+  name         String
+  fname        String?       // New: Father's Name
+  village      String?       // New: Village / Area
+  reference    String?       // New: Reference Person
+  phone        String?
+  cnic         String?
+  totalDue     Float         @default(0)
+  sales        Sale[]
+  installments Installment[]
+}
+
+
+
+model Sale {
+
+  id             String        @id @default(uuid())
+
+  invoiceNo      String        @unique
+
+  userId         String
+
+  user           User          @relation(fields: [userId], references: [id])
+
+  customerId     String?
+
+  customer       Customer?     @relation(fields: [customerId], references: [id])
+
+  subtotal       Float
+
+  discountAmount Float         @default(0)
+
+  netTotal       Float
+
+  paymentType    String        // "CASH", "CARD", "INSTALLMENT"
+
+  items          SaleItem[]
+
+  returns        Return[]
+
+  installment    Installment?
+
+  createdAt      DateTime      @default(now())
+
+}
+
+
+
+model SaleItem {
+
+  id            String  @id @default(uuid())
+
+  saleId        String
+
+  sale          Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  productId     String
+
+  product       Product @relation(fields: [productId], references: [id])
+
+  qty           Float
+
+  unitPrice     Float
+
+  isSaleApplied Boolean @default(false)
+
+  totalPrice    Float
+
+}
+
+
+
+model Installment {
+  id              String               @id @default(uuid())
+  saleId          String               @unique
+  sale            Sale                 @relation(fields: [saleId], references: [id])
+  customerId      String
+  customer        Customer             @relation(fields: [customerId], references: [id])
+  totalAmount     Float
+  paidAmount      Float                @default(0)
+  remainingAmount Float
+  status          String               @default("PENDING") // PENDING, COMPLETED
+  payments        InstallmentPayment[]
+  createdAt       DateTime             @default(now())
+}
+
+model InstallmentPayment {
+  id              String       @id @default(uuid())
+  installmentId   String
+  installment     Installment  @relation(fields: [installmentId], references: [id], onDelete: Cascade)
+  amountPaid      Float
+  paymentDate     DateTime     @default(now())
+  notes           String?      // Message / Details field during payment
+}
+
+
+
+model Return {
+
+  id           String       @id @default(uuid())
+
+  saleId       String
+
+  sale         Sale         @relation(fields: [saleId], references: [id])
+
+  userId       String
+
+  user         User         @relation(fields: [userId], references: [id])
+
+  refundAmount Float
+
+  items        ReturnItem[]
+
+  createdAt    DateTime     @default(now())
+
+}
+
+
+
+model ReturnItem {
+
+  id        String  @id @default(uuid())
+
+  returnId  String
+
+  return    Return  @relation(fields: [returnId], references: [id], onDelete: Cascade)
+
+  productId String
+
+  product   Product @relation(fields: [productId], references: [id])
+
+  qty       Float
+
+  restocked Boolean @default(true)
+
+}
+
+model StoreSetting {
+  id               String   @id @default("default")
+  storeName        String   @default("FABRIC POS")
+  phone            String   @default("+92 300 0000000")
+  address          String   @default("Main Market, City")
+  receiptFooterMsg String   @default("Goods once sold will not be returned or exchanged.")
+  updatedAt        DateTime @updatedAt
+}
