@@ -26,15 +26,23 @@ export default function SalesClient({ sales }: { sales: any[] }) {
   const [refundMethod, setRefundMethod] = useState<'KHATA' | 'CASH'>('KHATA');
   const [loadingItemId, setLoadingItemId] = useState<string | null>(null);
 
-  // Full Return Modal States
+  // Return message (khata adjustment note)
+  const [returnMessage, setReturnMessage] = useState('');
+  const [fullReturnMessage, setFullReturnMessage] = useState('');
+
+  // Amount to deduct from khata (custom amount — default full refund)
+  const [khataDeductAmount, setKhataDeductAmount] = useState<string>('');
+  const [fullKhataDeductAmount, setFullKhataDeductAmount] = useState<string>('');
+
+  // Full return modal states
   const [selectedSaleForFullReturn, setSelectedSaleForFullReturn] = useState<any>(null);
   const [fullRefundMethod, setFullRefundMethod] = useState<'KHATA' | 'CASH'>('KHATA');
   const [loadingSaleId, setLoadingSaleId] = useState<string | null>(null);
-  
+
   // Search query state
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Filter sales strictly by Invoice Number
+  // Filter sales strictly by invoice number
   const filteredSales = sales.filter((sale) => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return true;
@@ -45,17 +53,63 @@ export default function SalesClient({ sales }: { sales: any[] }) {
   const totalSales = sales.length;
   const totalItems = sales.reduce((sum, s) => sum + s.items.length, 0);
 
+  // ===== Computed values (for return modals) =====
+  const isItemKhataChoice = !!(
+    selectedItemForReturn?.sale?.customerId &&
+    selectedItemForReturn.sale.paymentType !== 'INSTALLMENT'
+  );
+  const itemRefundAmount = selectedItemForReturn
+    ? returnQty * selectedItemForReturn.unitPrice
+    : 0;
+  const itemKhataCut = parseFloat(khataDeductAmount) || 0;
+  const itemCashPortion = Math.max(0, itemRefundAmount - itemKhataCut);
+  const itemKhataInvalid =
+    isItemKhataChoice &&
+    refundMethod === 'KHATA' &&
+    (itemKhataCut <= 0 || itemKhataCut > itemRefundAmount);
+
+  const isFullKhataChoice = !!(
+    selectedSaleForFullReturn?.customerId &&
+    selectedSaleForFullReturn.paymentType !== 'INSTALLMENT'
+  );
+  const fullRefundAmount = selectedSaleForFullReturn
+    ? selectedSaleForFullReturn.netTotal
+    : 0;
+  const fullKhataCut = parseFloat(fullKhataDeductAmount) || 0;
+  const fullCashPortion = Math.max(0, fullRefundAmount - fullKhataCut);
+  const fullKhataInvalid =
+    isFullKhataChoice &&
+    fullRefundMethod === 'KHATA' &&
+    (fullKhataCut <= 0 || fullKhataCut > fullRefundAmount);
+
   const handleOpenReturnModal = (item: any) => {
     setSelectedItemForReturn(item);
     setReturnQty(item.qty);
     setRefundMethod('KHATA');
+    setReturnMessage('');
+    // Default: the full refund amount will be deducted from khata
+    setKhataDeductAmount(String(item.qty * item.unitPrice));
   };
 
   const handleProcessItemReturn = async () => {
     if (!selectedItemForReturn || returnQty <= 0) return;
+
+    const refundAmount = returnQty * selectedItemForReturn.unitPrice;
+
+    // Khata deduction amount (valid only for Deduct from Khata)
+    let deductAmount: number | undefined = undefined;
+    if (isItemKhataChoice && refundMethod === 'KHATA') {
+      deductAmount =
+        khataDeductAmount.trim() === '' ? refundAmount : parseFloat(khataDeductAmount);
+      if (!deductAmount || deductAmount <= 0 || deductAmount > refundAmount) {
+        alert(`Khata deduction amount must be between Rs. 1 and Rs. ${refundAmount.toFixed(2)}.`);
+        return;
+      }
+    }
+
     try {
       setLoadingItemId(selectedItemForReturn.id);
-      await returnSaleItem(selectedItemForReturn.id, returnQty, refundMethod);
+      await returnSaleItem(selectedItemForReturn.id, returnQty, refundMethod, returnMessage, deductAmount);
       setSelectedItemForReturn(null);
     } catch (error: any) {
       alert(error?.message || 'Failed to process item return');
@@ -67,13 +121,28 @@ export default function SalesClient({ sales }: { sales: any[] }) {
   const handleOpenFullReturnModal = (sale: any) => {
     setSelectedSaleForFullReturn(sale);
     setFullRefundMethod('KHATA');
+    setFullReturnMessage('');
+    // Default: the full invoice amount will be deducted from khata
+    setFullKhataDeductAmount(String(sale.netTotal));
   };
 
   const handleProcessFullReturn = async () => {
     if (!selectedSaleForFullReturn) return;
+
+    // Khata deduction amount (valid only for Deduct from Khata)
+    let deductAmount: number | undefined = undefined;
+    if (isFullKhataChoice && fullRefundMethod === 'KHATA') {
+      deductAmount =
+        fullKhataDeductAmount.trim() === '' ? fullRefundAmount : fullKhataCut;
+      if (!deductAmount || deductAmount <= 0 || deductAmount > fullRefundAmount) {
+        alert(`Khata deduction amount must be between Rs. 1 and Rs. ${fullRefundAmount.toFixed(2)}.`);
+        return;
+      }
+    }
+
     try {
       setLoadingSaleId(selectedSaleForFullReturn.id);
-      await returnSale(selectedSaleForFullReturn.id);
+      await returnSale(selectedSaleForFullReturn.id, fullRefundMethod, fullReturnMessage, deductAmount);
       setSelectedSaleForFullReturn(null);
     } catch (error: any) {
       alert(error?.message || 'Failed to process full return');
@@ -137,16 +206,16 @@ export default function SalesClient({ sales }: { sales: any[] }) {
             </thead>
             <tbody>
               ${sale.items
-                .map(
-                  (item: any) => `
+        .map(
+          (item: any) => `
                 <tr>
                   <td>${item.product.name}</td>
                   <td class="right">${item.qty}</td>
                   <td class="right">${item.totalPrice}</td>
                 </tr>
               `
-                )
-                .join('')}
+        )
+        .join('')}
             </tbody>
           </table>
 
@@ -263,7 +332,7 @@ export default function SalesClient({ sales }: { sales: any[] }) {
         ) : (
           filteredSales.map((sale) => (
             <div key={sale.id} className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-5 space-y-4 transition-all hover:shadow-md">
-              
+
               {/* Invoice Header */}
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-200/60 pb-3">
                 <div className="flex items-center gap-3 flex-wrap">
@@ -285,13 +354,12 @@ export default function SalesClient({ sales }: { sales: any[] }) {
                 <div className="flex items-center gap-2 flex-wrap">
                   {/* Payment Type Badge */}
                   <span
-                    className={`text-xs px-2.5 py-1 rounded-full font-semibold border flex items-center gap-1 ${
-                      sale.paymentType === 'CASH'
-                        ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                        : sale.paymentType === 'CARD'
+                    className={`text-xs px-2.5 py-1 rounded-full font-semibold border flex items-center gap-1 ${sale.paymentType === 'CASH'
+                      ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                      : sale.paymentType === 'CARD'
                         ? 'bg-blue-50 text-blue-600 border-blue-200'
                         : 'bg-amber-50 text-amber-600 border-amber-200'
-                    }`}
+                      }`}
                   >
                     {sale.paymentType === 'CASH' ? (
                       <Banknote className="w-3.5 h-3.5" />
@@ -452,48 +520,143 @@ export default function SalesClient({ sales }: { sales: any[] }) {
                 min="0.01"
                 max={selectedItemForReturn.qty}
                 value={returnQty}
-                onChange={(e) => setReturnQty(parseFloat(e.target.value) || 0)}
+                onChange={(e) => {
+                  const q = parseFloat(e.target.value) || 0;
+                  setReturnQty(q);
+                  // If the khata deduction exceeds the new refund amount, auto-clamp it
+                  const newRefund = q * selectedItemForReturn.unitPrice;
+                  if ((parseFloat(khataDeductAmount) || 0) > newRefund) {
+                    setKhataDeductAmount(String(newRefund));
+                  }
+                }}
                 className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2 text-sm text-slate-800 font-mono focus:outline-none focus:border-amber-400 transition-all"
               />
             </div>
 
-            {/* Refund Method Selection for Khata Customers */}
-            {selectedItemForReturn.sale?.customerId && (
+            {/* INSTALLMENT sale info — no choice is required; khata is adjusted directly */}
+            {selectedItemForReturn.sale?.customerId && selectedItemForReturn.sale?.paymentType === 'INSTALLMENT' && (
+              <p className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200/60 rounded-lg px-2.5 py-1.5">
+                📋 This is an <b>Installment Khata</b> sale — when returned, the khata balance will be <b>reduced automatically</b>.
+              </p>
+            )}
+
+            {/* Refund method — only for CASH sales and khata customers (not INSTALLMENT) */}
+            {isItemKhataChoice && (
               <div className="space-y-1.5 pt-1 border-t border-slate-200/60">
                 <label className="block text-xs font-semibold text-slate-700">Refund Method (Khata Customer):</label>
+
+                {/* Current khata balance hint */}
+                {selectedItemForReturn.sale?.customer && (
+                  <p className="text-[10px] text-slate-500 bg-slate-50 border border-slate-200/60 rounded-lg px-2.5 py-1.5">
+                    <b>{selectedItemForReturn.sale.customer.name}</b> current khata balance:{' '}
+                    <b className="text-amber-600 font-mono">
+                      Rs. {(selectedItemForReturn.sale.customer.totalDue || 0).toLocaleString()}
+                    </b>
+                  </p>
+                )}
+
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setRefundMethod('KHATA')}
-                    className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                      refundMethod === 'KHATA'
-                        ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm'
-                        : 'bg-slate-50 border-slate-200 text-slate-600'
-                    }`}
+                    className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${refundMethod === 'KHATA'
+                      ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm'
+                      : 'bg-slate-50 border-slate-200 text-slate-600'
+                      }`}
                   >
                     Deduct from Khata
                   </button>
                   <button
                     type="button"
                     onClick={() => setRefundMethod('CASH')}
-                    className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                      refundMethod === 'CASH'
-                        ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
-                        : 'bg-slate-50 border-slate-200 text-slate-600'
-                    }`}
+                    className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${refundMethod === 'CASH'
+                      ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
+                      : 'bg-slate-50 border-slate-200 text-slate-600'
+                      }`}
                   >
                     Pay Cash Refund
                   </button>
                 </div>
+
+                {/* Deduct from Khata → Amount + Message */}
+                {refundMethod === 'KHATA' && (
+                  <div className="space-y-2.5">
+                    {/* Khata deduction amount */}
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-xs font-semibold text-slate-600">
+                          How much to deduct from khata? (Rs.):
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setKhataDeductAmount(String(itemRefundAmount))}
+                          className="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md transition-all cursor-pointer"
+                        >
+                          Full Rs. {itemRefundAmount.toFixed(0)}
+                        </button>
+                      </div>
+                      <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        max={itemRefundAmount}
+                        value={khataDeductAmount}
+                        onChange={(e) => setKhataDeductAmount(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2 text-sm text-slate-800 font-mono focus:outline-none focus:border-indigo-400 transition-all"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        Total refund <b className="font-mono">Rs. {itemRefundAmount.toFixed(0)}</b> — of this, {' '}
+                        <b className="text-indigo-600 font-mono">Rs. {itemKhataCut.toFixed(0)}</b> will be deducted from khata
+                        {itemCashPortion > 0 && (
+                          <>, <b className="text-emerald-600 font-mono">Rs. {itemCashPortion.toFixed(0)}</b> will be paid in cash</>
+                        )}
+                      </p>
+                    </div>
+
+                    {itemKhataInvalid && (
+                      <p className="text-[10px] text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">
+                        ⚠️ Amount must be between Rs. 1 and Rs. {itemRefundAmount.toFixed(2)}
+                      </p>
+                    )}
+
+                    {/* Message input */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Message (for khata history):
+                      </label>
+                      <input
+                        type="text"
+                        value={returnMessage}
+                        onChange={(e) => setReturnMessage(e.target.value)}
+                        placeholder="e.g. Suit was not to my liking, adjust from khata"
+                        className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2 text-sm text-slate-800 focus:outline-none focus:border-indigo-400 transition-all"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Refund Amount */}
-            <div className="bg-amber-50/50 border border-amber-200/60 p-2.5 rounded-xl flex justify-between text-xs font-mono">
-              <span className="text-amber-700 font-medium">Refund Amount:</span>
-              <span className="font-bold text-amber-700">
-                Rs. {(returnQty * selectedItemForReturn.unitPrice).toFixed(2)}
-              </span>
+            {/* Refund Amount Summary */}
+            <div className="bg-amber-50/50 border border-amber-200/60 p-2.5 rounded-xl text-xs font-mono space-y-1">
+              <div className="flex justify-between">
+                <span className="text-amber-700 font-medium">Total Refund:</span>
+                <span className="font-bold text-amber-700">Rs. {itemRefundAmount.toFixed(2)}</span>
+              </div>
+              {isItemKhataChoice && refundMethod === 'KHATA' && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-indigo-700 font-medium">Deducted from Khata:</span>
+                    <span className="font-bold text-indigo-700">Rs. {itemKhataCut.toFixed(2)}</span>
+                  </div>
+                  {itemCashPortion > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-emerald-700 font-medium">Cash Refund:</span>
+                      <span className="font-bold text-emerald-700">Rs. {itemCashPortion.toFixed(2)}</span>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Actions */}
@@ -503,7 +666,8 @@ export default function SalesClient({ sales }: { sales: any[] }) {
                 disabled={
                   loadingItemId === selectedItemForReturn.id ||
                   returnQty <= 0 ||
-                  returnQty > selectedItemForReturn.qty
+                  returnQty > selectedItemForReturn.qty ||
+                  itemKhataInvalid
                 }
                 onClick={handleProcessItemReturn}
                 className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 text-white font-semibold py-2.5 rounded-xl text-xs transition-all shadow-lg flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
@@ -563,33 +727,99 @@ export default function SalesClient({ sales }: { sales: any[] }) {
             </div>
 
             {/* Refund Method Selection for Khata Customers on Full Return */}
-            {selectedSaleForFullReturn.customerId && (
+            {isFullKhataChoice && (
               <div className="space-y-1.5 pt-1 border-t border-slate-200/60">
                 <label className="block text-xs font-semibold text-slate-700">Full Return Refund Method (Khata Customer):</label>
+
+                {/* Khata balance hint — same as in the single-item modal */}
+                {selectedSaleForFullReturn.customer && (
+                  <p className="text-[10px] text-slate-500 bg-slate-50 border border-slate-200/60 rounded-lg px-2.5 py-1.5">
+                    <b>{selectedSaleForFullReturn.customer.name}</b> current khata balance:{' '}
+                    <b className="text-amber-600 font-mono">
+                      Rs. {(selectedSaleForFullReturn.customer.totalDue || 0).toLocaleString()}
+                    </b>
+                  </p>
+                )}
+
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setFullRefundMethod('KHATA')}
-                    className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                      fullRefundMethod === 'KHATA'
-                        ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm'
-                        : 'bg-slate-50 border-slate-200 text-slate-600'
-                    }`}
+                    className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${fullRefundMethod === 'KHATA'
+                      ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm'
+                      : 'bg-slate-50 border-slate-200 text-slate-600'
+                      }`}
                   >
                     Deduct from Khata
                   </button>
                   <button
                     type="button"
                     onClick={() => setFullRefundMethod('CASH')}
-                    className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                      fullRefundMethod === 'CASH'
-                        ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
-                        : 'bg-slate-50 border-slate-200 text-slate-600'
-                    }`}
+                    className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${fullRefundMethod === 'CASH'
+                      ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
+                      : 'bg-slate-50 border-slate-200 text-slate-600'
+                      }`}
                   >
                     Pay Cash Refund
                   </button>
                 </div>
+
+                {/* Deduct from Khata → Amount + Message */}
+                {fullRefundMethod === 'KHATA' && (
+                  <div className="space-y-2.5">
+                    {/* Khata deduction amount */}
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-xs font-semibold text-slate-600">
+                          How much to deduct from khata? (Rs.):
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setFullKhataDeductAmount(String(fullRefundAmount))}
+                          className="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md transition-all cursor-pointer"
+                        >
+                          Full Rs. {fullRefundAmount.toFixed(0)}
+                        </button>
+                      </div>
+                      <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        max={fullRefundAmount}
+                        value={fullKhataDeductAmount}
+                        onChange={(e) => setFullKhataDeductAmount(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2 text-sm text-slate-800 font-mono focus:outline-none focus:border-indigo-400 transition-all"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        Total refund <b className="font-mono">Rs. {fullRefundAmount.toFixed(0)}</b> — of this,{' '}
+                        <b className="text-indigo-600 font-mono">Rs. {fullKhataCut.toFixed(0)}</b> will be deducted from khata
+                        {fullCashPortion > 0 && (
+                          <>, <b className="text-emerald-600 font-mono">Rs. {fullCashPortion.toFixed(0)}</b> will be paid in cash</>
+                        )}
+                      </p>
+                    </div>
+
+                    {fullKhataInvalid && (
+                      <p className="text-[10px] text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">
+                        ⚠️ Amount must be between Rs. 1 and Rs. {fullRefundAmount.toFixed(2)}
+                      </p>
+                    )}
+
+                    {/* Message input */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Message (for khata history):
+                      </label>
+                      <input
+                        type="text"
+                        value={fullReturnMessage}
+                        onChange={(e) => setFullReturnMessage(e.target.value)}
+                        placeholder="e.g. Full return, adjust from khata"
+                        className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2 text-sm text-slate-800 focus:outline-none focus:border-indigo-400 transition-all"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -597,7 +827,7 @@ export default function SalesClient({ sales }: { sales: any[] }) {
             <div className="flex gap-2 pt-2">
               <button
                 type="button"
-                disabled={loadingSaleId === selectedSaleForFullReturn.id}
+                disabled={loadingSaleId === selectedSaleForFullReturn.id || fullKhataInvalid}
                 onClick={handleProcessFullReturn}
                 className="flex-1 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 text-white font-semibold py-2.5 rounded-xl text-xs transition-all shadow-lg flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
               >

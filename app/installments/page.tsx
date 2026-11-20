@@ -441,7 +441,7 @@ export default function InstallmentsPage() {
                 </div>
               )}
 
-              {/* 🌟 TABLE VIEW FOR SHOPPING HISTORY WITH ADVANCE COLUMN */}
+              {/* TABLE VIEW FOR SHOPPING HISTORY WITH ADVANCE COLUMN */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden space-y-3">
                 <div className="p-4 border-b border-slate-200/60 bg-slate-50/80 flex items-center justify-between">
                   <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
