@@ -75,15 +75,16 @@ model Category {
 
 
 model Unit {
-
-  id        String    @id @default(uuid())
-
-  name      String    // Meter, Yard, Suit, Piece
-
-  shortCode String    // m, yd, st, pc
-
-  products  Product[]
-
+  id                 String     @id @default(uuid())
+  name               String     // Meter, Yard
+  shortCode          String     // m, yd
+  conversionQty      Float?     // e.g. 4 => 4 (ye unit) = 1 (badi unit)
+  conversionUnitName String?    // e.g. "Suit" => 4 Meter = 1 Suit
+  baseUnitId         String?
+  baseUnit           Unit?      @relation("UnitConversions", fields: [baseUnitId], references: [id])
+  derivedUnits       Unit[]     @relation("UnitConversions")
+  products           Product[]
+  saleItems          SaleItem[]
 }
 
 
@@ -176,25 +177,18 @@ model Sale {
 
 
 model SaleItem {
-
   id            String  @id @default(uuid())
-
   saleId        String
-
   sale          Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
-
   productId     String
-
   product       Product @relation(fields: [productId], references: [id])
-
   qty           Float
-
   unitPrice     Float
-
   isSaleApplied Boolean @default(false)
-
   totalPrice    Float
-
+  soldUnitId    String? // kis unit me bike (e.g. Suit)
+  soldUnit      Unit?   @relation(fields: [soldUnitId], references: [id])
+  baseQty       Float?  // base unit me total kitna hua (e.g. 1 suit = 4 meter)
 }
 
 

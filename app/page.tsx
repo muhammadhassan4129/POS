@@ -1,25 +1,25 @@
-import { getDashboardStats } from '@/app/actions/dashboard';
-import { getCurrentUser } from '@/app/actions/auth'; // Farz karein aapke paas current user nikalne ka action hai
+import { getDashboardStats, getKhataDefaulters, getSalesReport, getKhataHistory } from '@/app/actions/dashboard';
+import SalesReportCard from '@/src/components/SalesReportCard';
+import KhataDefaultersCard from '@/src/components/KhataDefaultersCard';
+import KhataHistoryCard from '@/src/components/KhataHistoryCard';
+import { getCurrentUser } from '@/app/actions/auth';
 import { redirect } from 'next/navigation';
 import { DollarSign, ShoppingBag, AlertTriangle, CreditCard, ArrowUpRight, Clock, User, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default async function DashboardPage() {
   // 1. Current logged-in user aur uski permissions fetch karein
-  // (Apne auth action ke mutabiq ise adjust karlein agar function ka naam mukhtalif hai)
   const user = await getCurrentUser();
 
   // 2. Agar user Super Admin nahi hai, toh check karein ke kya uske paas '/' ka access hai
   if (user && user.role !== 'SUPER_ADMIN') {
     const homePermission = user.permissions?.find((p: any) => p.pageRoute === '/');
-    
-    // Agar dashboard ka access false ya missing hai
+
     if (!homePermission || !homePermission.canAccess) {
-      // Us pehle page ko dhoondein jiska access user ke paas available ho
       const firstAllowed = user.permissions?.find((p: any) => p.canAccess);
-      
+
       if (firstAllowed) {
-        redirect(firstAllowed.pageRoute); // Misal ke tor par /pos ya /inventory par bhej dein
+        redirect(firstAllowed.pageRoute);
       } else {
         return (
           <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
@@ -38,6 +38,12 @@ export default async function DashboardPage() {
 
   const stats = await getDashboardStats();
 
+  const khataData = await getKhataDefaulters();
+
+  const salesReportData = await getSalesReport();
+
+  const khataHistoryData = await getKhataHistory();
+
   return (
     <div className="min-h-screen bg-slate-50 p-6 space-y-6">
       {/* Header */}
@@ -51,7 +57,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Top Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {/* Total Revenue */}
         <div className="group bg-white rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-200/60 hover:border-indigo-200/50">
           <div className="flex items-center justify-between">
@@ -119,7 +125,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Low Stock */}
+        {/* Low Stock Stat Card */}
         <div className="group bg-white rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-200/60 hover:border-red-200/50">
           <div className="flex items-center justify-between">
             <div>
@@ -136,78 +142,39 @@ export default async function DashboardPage() {
           </div>
           <div className="mt-3">
             <span className="text-[10px] font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
-              {stats.lowStockCount > 0 ? '❗ Needs attention' : '✅ All good'}
+              {stats.lowStockCount > 0 ? '❗ Needs attention' : ' All good'}
             </span>
           </div>
         </div>
+
+        {/* Khata Defaulters */}
+        <KhataDefaultersCard data={khataData} />
+
+        {/* Sales Report */}
+        <SalesReportCard data={salesReportData} />
       </div>
 
-      {/* Main Grid: Low Stock & Recent Sales */}
+      {/* Main Grid: Khata History & Recent Sales */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Low Stock */}
-        <div className="lg:col-span-5 bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-200/60 p-6">
-          <div className="flex justify-between items-center border-b border-slate-200/60 pb-4 mb-5">
-            <h2 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-              <AlertTriangle className="w-4 h-4 text-red-500" /> 
-              Low Stock Warning
-              <span className="text-[10px] font-normal text-slate-400 ml-1">(&le; 10 Units)</span>
-            </h2>
-            <Link 
-              href="/inventory" 
-              className="text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-0.5 transition-colors"
-            >
-              Manage Stock <ArrowUpRight className="w-3 h-3" />
-            </Link>
-          </div>
-
-          <div className="space-y-3">
-            {stats.lowStockProducts.length === 0 ? (
-              <div className="text-center py-12 text-xs text-slate-500 flex flex-col items-center gap-2 bg-slate-50 rounded-xl border border-slate-200/60">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-                <p className="font-medium text-slate-700">All stock levels are healthy!</p>
-                <p className="text-[11px] text-slate-400">No items need restocking right now.</p>
-              </div>
-            ) : (
-              stats.lowStockProducts.map((p) => (
-                <div 
-                  key={p.id} 
-                  className="bg-slate-50 p-4 rounded-xl border border-slate-200/60 hover:border-red-200 transition-all duration-200 flex items-center justify-between text-xs group"
-                >
-                  <div>
-                    <p className="font-semibold text-slate-800 group-hover:text-slate-900">
-                      {p.name}
-                    </p>
-                    <p className="text-[11px] text-slate-500 font-mono mt-0.5">
-                      Rs. {p.salePrice} / {p.unit.shortCode}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="bg-red-100 text-red-700 px-3 py-1.5 rounded-lg font-mono font-bold text-sm">
-                      {p.stockQty} left
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        {/* Left: Khata History */}
+        <KhataHistoryCard data={khataHistoryData} />
 
         {/* Right: Recent Sales */}
         <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-200/60 p-6">
           <div className="flex justify-between items-center border-b border-slate-200/60 pb-4 mb-5">
             <h2 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-              <Clock className="w-4 h-4 text-indigo-600" /> 
+              <Clock className="w-4 h-4 text-indigo-600" />
               Recent Sales Activity
             </h2>
-            <Link 
-              href="/sales" 
+            <Link
+              href="/sales"
               className="text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-0.5 transition-colors"
             >
               View All <ArrowUpRight className="w-3 h-3" />
             </Link>
           </div>
 
-          <div className="space-y-0.5 space-y-3">
+          <div className="space-y-3">
             {stats.recentSales.length === 0 ? (
               <div className="text-center py-12 text-slate-500 bg-slate-50 rounded-xl border border-slate-200/60">
                 <p className="text-sm font-medium text-slate-700">No transactions yet</p>
@@ -215,8 +182,8 @@ export default async function DashboardPage() {
               </div>
             ) : (
               stats.recentSales.map((sale) => (
-                <div 
-                  key={sale.id} 
+                <div
+                  key={sale.id}
                   className="bg-slate-50 p-4 rounded-xl border border-slate-200/60 hover:border-indigo-200 transition-all duration-200 flex items-center justify-between text-xs group"
                 >
                   <div className="flex-1">
@@ -233,8 +200,8 @@ export default async function DashboardPage() {
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-400 font-mono mt-1.5">
-                      {new Date(sale.createdAt).toLocaleTimeString('en-GB', { 
-                        hour: '2-digit', 
+                      {new Date(sale.createdAt).toLocaleTimeString('en-GB', {
+                        hour: '2-digit',
                         minute: '2-digit',
                         day: '2-digit',
                         month: 'short'
@@ -254,6 +221,52 @@ export default async function DashboardPage() {
               ))
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Low Stock Warning — Full Width (neeche shift kiya gaya) */}
+      <div className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-200/60 p-6">
+        <div className="flex justify-between items-center border-b border-slate-200/60 pb-4 mb-5">
+          <h2 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
+            <AlertTriangle className="w-4 h-4 text-red-500" />
+            Low Stock Warning
+            <span className="text-[10px] font-normal text-slate-400 ml-1">(&le; 10 Units)</span>
+          </h2>
+          <Link
+            href="/inventory"
+            className="text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-0.5 transition-colors"
+          >
+            Manage Stock <ArrowUpRight className="w-3 h-3" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {stats.lowStockProducts.length === 0 ? (
+            <div className="col-span-full text-center py-12 text-xs text-slate-500 flex flex-col items-center gap-2 bg-slate-50 rounded-xl border border-slate-200/60">
+              <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+              <p className="font-medium text-slate-700">All stock levels are healthy!</p>
+              <p className="text-[11px] text-slate-400">No items need restocking right now.</p>
+            </div>
+          ) : (
+            stats.lowStockProducts.map((p) => (
+              <div
+                key={p.id}
+                className="bg-slate-50 p-4 rounded-xl border border-slate-200/60 hover:border-red-200 transition-all duration-200 flex items-center justify-between text-xs group"
+              >
+                <div>
+                  <p className="font-semibold text-slate-800 group-hover:text-slate-900">
+                    {p.name}
+                  </p>
+                  <p className="text-[11px] text-slate-500 font-mono mt-0.5">
+                    Rs. {p.salePrice} / {p.unit.shortCode}
+                  </p>
+                </div>
+                <span className="bg-red-100 text-red-700 px-3 py-1.5 rounded-lg font-mono font-bold text-sm">
+                  {p.stockQty} left
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

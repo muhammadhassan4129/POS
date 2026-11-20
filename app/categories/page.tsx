@@ -20,6 +20,16 @@ export default function CategoriesPage() {
   const [editingCategory, setEditingCategory] = useState<any | null>(null);
   const [editingUnit, setEditingUnit] = useState<any | null>(null);
 
+  // Add Unit form ke live-preview states
+  // const [unitName, setUnitName] = useState('');
+  // const [unitBase, setUnitBase] = useState('NONE');
+  // const [unitQty, setUnitQty] = useState('');
+
+  // Add Unit form ke live-preview states
+  const [unitName, setUnitName] = useState('');
+  const [unitQty, setUnitQty] = useState('');
+  const [unitConvName, setUnitConvName] = useState('');
+
   const loadData = async () => {
     const data = await getCategoriesAndUnitsData();
     setCategories(data.categories);
@@ -56,9 +66,8 @@ export default function CategoriesPage() {
               <div className="flex items-center gap-2">
                 {level > 0 && <ChevronRight className="w-3.5 h-3.5 text-indigo-400" />}
                 <p className="text-sm font-semibold text-slate-800">{c.name}</p>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                  level === 0 ? 'bg-emerald-50 text-emerald-600' : level === 1 ? 'bg-indigo-50 text-indigo-600' : 'bg-purple-50 text-purple-600'
-                }`}>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${level === 0 ? 'bg-emerald-50 text-emerald-600' : level === 1 ? 'bg-indigo-50 text-indigo-600' : 'bg-purple-50 text-purple-600'
+                  }`}>
                   {level === 0 ? 'Main Category' : level === 1 ? 'Sub-Category' : `Sub-Sub (${level + 1})`}
                 </span>
               </div>
@@ -143,7 +152,7 @@ export default function CategoriesPage() {
           {/* Add Category Form - Light Theme */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-5">
             <h2 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <Tags className="w-5 h-5 text-indigo-600" /> 
+              <Tags className="w-5 h-5 text-indigo-600" />
               Add Category / Sub-Category
             </h2>
 
@@ -192,7 +201,7 @@ export default function CategoriesPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
             <div className="p-4 border-b border-slate-200/60 bg-slate-50/80">
               <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-indigo-600" /> 
+                <Layers className="w-4 h-4 text-indigo-600" />
                 Multi-level Categories Tree
                 <span className="ml-auto text-xs font-normal text-slate-400 bg-white px-2.5 py-0.5 rounded-full border border-slate-200">
                   {categories.length}
@@ -219,11 +228,20 @@ export default function CategoriesPage() {
           {/* Add Unit Form - Light Theme */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-5">
             <h2 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <Scale className="w-5 h-5 text-emerald-600" /> 
+              <Scale className="w-5 h-5 text-emerald-600" />
               Add Measurement Unit
             </h2>
 
-            <form action={async (formData) => { await addUnit(formData); loadData(); }} className="space-y-4">
+            <form
+              action={async (formData) => {
+                await addUnit(formData);
+                loadData();
+                setUnitName('');
+                setUnitQty('');
+                setUnitConvName('');
+              }}
+              className="space-y-4"
+            >
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1.5">
@@ -233,11 +251,12 @@ export default function CategoriesPage() {
                     type="text"
                     name="name"
                     required
+                    value={unitName}
+                    onChange={(e) => setUnitName(e.target.value)}
                     placeholder="e.g. Meter, Yard, Suit"
                     className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
                   />
                 </div>
-
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1.5">
                     Short Code <span className="text-rose-500">*</span>
@@ -252,9 +271,39 @@ export default function CategoriesPage() {
                 </div>
               </div>
 
+              {/* Unit Conversion (Optional) */}
+              <div className="bg-emerald-50/50 border border-emerald-200/60 rounded-xl p-3 space-y-2">
+                <p className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5">
+                  <Ruler className="w-3.5 h-3.5" /> Unit Conversion (Optional)
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    name="conversionQty"
+                    value={unitQty}
+                    onChange={(e) => setUnitQty(e.target.value)}
+                    placeholder="4"
+                    className="w-24 bg-white border border-slate-200/60 rounded-xl px-3 py-2 text-sm text-slate-800 font-mono text-center focus:outline-none focus:border-emerald-400"
+                  />
+                  <span className="text-xs font-bold text-slate-700 whitespace-nowrap">{unitName || 'Unit'}</span>
+                  <span className="text-xs text-slate-400 font-semibold">= 1</span>
+                  <input
+                    type="text"
+                    name="conversionUnitName"
+                    value={unitConvName}
+                    onChange={(e) => setUnitConvName(e.target.value)}
+                    placeholder="Suit"
+                    className="flex-1 bg-white border border-slate-200/60 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+                
+              </div>
+
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-200/50 transition-all hover:shadow-emerald-300/50"
+                className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-200/50 transition-all"
               >
                 <Plus className="w-4 h-4" /> Save Measurement Unit
               </button>
@@ -265,7 +314,7 @@ export default function CategoriesPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
             <div className="p-4 border-b border-slate-200/60 bg-slate-50/80">
               <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                <Scale className="w-4 h-4 text-emerald-600" /> 
+                <Scale className="w-4 h-4 text-emerald-600" />
                 Active Measurement Units
                 <span className="ml-auto text-xs font-normal text-slate-400 bg-white px-2.5 py-0.5 rounded-full border border-slate-200">
                   {units.length}
@@ -331,8 +380,8 @@ export default function CategoriesPage() {
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">Update category details</p>
               </div>
-              <button 
-                onClick={() => setEditingCategory(null)} 
+              <button
+                onClick={() => setEditingCategory(null)}
                 className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-all"
               >
                 <X className="w-4 h-4" />
@@ -407,8 +456,8 @@ export default function CategoriesPage() {
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">Update unit details</p>
               </div>
-              <button 
-                onClick={() => setEditingUnit(null)} 
+              <button
+                onClick={() => setEditingUnit(null)}
                 className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-all"
               >
                 <X className="w-4 h-4" />
@@ -442,6 +491,30 @@ export default function CategoriesPage() {
                     defaultValue={editingUnit.shortCode}
                     required
                     className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 text-sm text-slate-800 font-mono focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-emerald-50/50 border border-emerald-200/60 rounded-xl p-3 space-y-2">
+                <p className="text-xs font-semibold text-emerald-700">Unit Conversion (Optional)</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    name="conversionQty"
+                    defaultValue={editingUnit.conversionQty || ''}
+                    placeholder="4"
+                    className="w-24 bg-white border border-slate-200/60 rounded-xl px-3 py-2 text-sm text-slate-800 font-mono text-center focus:outline-none focus:border-emerald-400"
+                  />
+                  <span className="text-xs font-bold text-slate-700 whitespace-nowrap">{editingUnit.name}</span>
+                  <span className="text-xs text-slate-400 font-semibold">= 1</span>
+                  <input
+                    type="text"
+                    name="conversionUnitName"
+                    defaultValue={editingUnit.conversionUnitName || ''}
+                    placeholder="Suit"
+                    className="flex-1 bg-white border border-slate-200/60 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-400"
                   />
                 </div>
               </div>

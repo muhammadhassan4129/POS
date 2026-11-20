@@ -4,7 +4,7 @@ import PosClient from '@/src/components/PosClient';
 
 export default async function PosPage() {
   const { products, customers } = await getPosData();
-  const settings = await getStoreSettings(); // Prisma se storeSetting fetch karein
+  const settings = await getStoreSettings();
 
   return (
     <div>
