@@ -5,6 +5,8 @@ import Header from '@/src/components/Header';
 import { getCurrentUser } from './actions/auth';
 import { getStoreSettings } from './actions/settings';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Offline Fabric POS System',
   description: 'Custom Tailoring & Fabric POS Software',
