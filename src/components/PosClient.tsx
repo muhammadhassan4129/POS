@@ -24,6 +24,226 @@ import {
   Package,
 } from 'lucide-react';
 
+// ==========================================
+// 80MM THERMAL RECEIPT STYLES
+// ==========================================
+
+const RECEIPT_CSS = `
+  #thermal-receipt-container,
+  #thermal-receipt-container * {
+    box-sizing: border-box;
+    color: #000000;
+    text-shadow: none;
+    box-shadow: none;
+  }
+
+  #thermal-receipt-container {
+    display: block;
+    width: 72mm;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 2mm;
+    background: #ffffff;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    overflow: visible;
+  }
+
+  #thermal-receipt-container h2,
+  #thermal-receipt-container p {
+    margin: 0;
+  }
+
+  .receipt-header {
+    text-align: center;
+    padding: 2mm 0 3mm;
+  }
+
+  #thermal-receipt-container .receipt-shop-name {
+    font-size: 26px;
+    font-weight: 900;
+    line-height: 1.2;
+    text-align: center;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+    overflow-wrap: anywhere;
+  }
+
+  #thermal-receipt-container .receipt-shop-info {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: center;
+    margin: 3px 0;
+    overflow-wrap: anywhere;
+  }
+
+  .receipt-title {
+    font-size: 17px;
+    font-weight: 900;
+    text-align: center;
+    padding: 7px 0;
+    margin-bottom: 9px;
+    border-top: 2px dashed #000000;
+    border-bottom: 2px dashed #000000;
+  }
+
+  .receipt-details {
+    margin-bottom: 10px;
+  }
+
+  .receipt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 5px 0;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .receipt-row > span:first-child {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .receipt-row > span:last-child {
+    text-align: right;
+    max-width: 65%;
+    overflow-wrap: anywhere;
+    font-weight: 700;
+  }
+
+  .receipt-divider {
+    border: none;
+    border-top: 2px dashed #000000;
+    margin: 9px 0;
+  }
+
+  .receipt-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    border-spacing: 0;
+    font-size: 14px;
+  }
+
+  .receipt-table thead th {
+    padding: 7px 0;
+    font-size: 13px;
+    font-weight: 900;
+    border-top: 2px solid #000000;
+    border-bottom: 2px solid #000000;
+  }
+
+  .receipt-table tbody td {
+    padding: 8px 0;
+    font-size: 14px;
+    font-weight: 700;
+    vertical-align: top;
+    border-bottom: 1px dashed #000000;
+    overflow-wrap: anywhere;
+  }
+
+  .receipt-item-name {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    padding-right: 4px;
+    overflow-wrap: anywhere;
+  }
+
+  .receipt-item-rate {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-top: 4px;
+    overflow-wrap: anywhere;
+  }
+
+  .receipt-totals {
+    padding-top: 8px;
+  }
+
+  .receipt-net-total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    font-size: 19px;
+    font-weight: 900;
+    line-height: 1.25;
+    padding: 9px 0;
+    margin: 9px 0;
+    border-top: 2px solid #000000;
+    border-bottom: 2px solid #000000;
+  }
+
+  .receipt-net-total > span:last-child {
+    text-align: right;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .receipt-payment-row {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 6px 0;
+  }
+
+  .receipt-balance {
+    font-size: 16px;
+    font-weight: 900;
+    padding: 7px 0;
+    margin-top: 6px;
+    border-top: 1px dashed #000000;
+  }
+
+  .receipt-payment-status {
+    font-size: 15px;
+    font-weight: 900;
+    text-align: center;
+    border: 2px solid #000000;
+    padding: 7px 3px;
+    margin: 10px 0;
+  }
+
+  .receipt-footer {
+    text-align: center;
+    border-top: 2px dashed #000000;
+    padding-top: 10px;
+    padding-bottom: 3mm;
+    margin-top: 10px;
+    overflow-wrap: anywhere;
+  }
+
+  #thermal-receipt-container .receipt-footer-message {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  #thermal-receipt-container .receipt-footer-visit {
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 5px;
+  }
+
+  @media print {
+    .receipt-header,
+    .receipt-table tr,
+    .receipt-net-total,
+    .receipt-payment-status,
+    .receipt-footer {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+  }
+`;
+
 export default function PosClient({
   products,
   customers,
@@ -49,32 +269,48 @@ export default function PosClient({
 
   const [completedSale, setCompletedSale] = useState<any>(null);
 
-  // Load saved cart
-  useEffect(() => {
-    const savedCart = localStorage.getItem('pos_cart');
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [cartLoaded, setCartLoaded] = useState(false);
 
-    if (savedCart) {
-      try {
-        setCart(JSON.parse(savedCart));
-      } catch (e) {
-        console.error('Failed to parse saved cart:', e);
+  // ==========================================
+  // LOCAL STORAGE
+  // ==========================================
+
+  useEffect(() => {
+    try {
+      const savedCart = localStorage.getItem('pos_cart');
+
+      if (savedCart) {
+        const parsedCart = JSON.parse(savedCart);
+
+        if (Array.isArray(parsedCart)) {
+          setCart(parsedCart);
+        }
       }
+    } catch (error) {
+      console.error('Failed to load cart:', error);
+    } finally {
+      setCartLoaded(true);
     }
   }, []);
 
-  // Save cart
   useEffect(() => {
-    localStorage.setItem('pos_cart', JSON.stringify(cart));
-  }, [cart]);
+    if (!cartLoaded) return;
 
-  // Reset advance payment for cash sales
+    localStorage.setItem('pos_cart', JSON.stringify(cart));
+  }, [cart, cartLoaded]);
+
   useEffect(() => {
     if (paymentType === 'CASH') {
       setAdvanceAmount(0);
     }
   }, [paymentType]);
 
-  // Currency formatter
+  // ==========================================
+  // CURRENCY FORMATTER
+  // ==========================================
+
   const formatAmount = (amount: any) => {
     return Number(amount ?? 0).toLocaleString('en-PK', {
       minimumFractionDigits: 0,
@@ -82,74 +318,261 @@ export default function PosClient({
     });
   };
 
-  // Add product to cart
-  const addToCart = (product: any) => {
-    const existing = cart.find(
-      (item) => item.productId === product.id
+  // ==========================================
+  // THERMAL RECEIPT PRINT FUNCTION
+  // ==========================================
+
+  const handlePrintReceipt = async () => {
+    if (isPrinting) return;
+
+    const receipt = document.getElementById(
+      'thermal-receipt-container'
     );
 
-    if (existing) {
-      setCart(
-        cart.map((item) =>
+    if (!receipt) {
+      alert('Receipt not found!');
+      return;
+    }
+
+    setIsPrinting(true);
+
+    // Remove previous printing frame
+    document.getElementById('pos-print-frame')?.remove();
+
+    // Create separate printing frame
+    const iframe = document.createElement('iframe');
+
+    iframe.id = 'pos-print-frame';
+    iframe.title = 'Thermal Receipt Print';
+
+    iframe.style.position = 'fixed';
+    iframe.style.left = '-10000px';
+    iframe.style.top = '0';
+    iframe.style.width = '80mm';
+    iframe.style.height = '100vh';
+    iframe.style.border = 'none';
+
+    document.body.appendChild(iframe);
+
+    const printWindow = iframe.contentWindow;
+    const printDocument = iframe.contentDocument;
+
+    if (!printWindow || !printDocument) {
+      iframe.remove();
+      setIsPrinting(false);
+      alert('Unable to initialize printing.');
+      return;
+    }
+
+    const cleanup = () => {
+      iframe.remove();
+      setIsPrinting(false);
+    };
+
+    try {
+      // Independent HTML document
+      printDocument.open();
+
+      printDocument.write(`
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="UTF-8" />
+
+            <meta
+              name="viewport"
+              content="width=device-width, initial-scale=1"
+            />
+
+            <title>Sales Receipt</title>
+
+            <style>
+              @page {
+                size: auto;
+                margin: 0;
+              }
+
+              html, body {
+                width: 100%;
+                height: auto;
+                min-height: 0;
+                margin: 0;
+                padding: 0;
+                background: #ffffff;
+                color: #000000;
+                overflow: visible;
+                font-family: Arial, Helvetica, sans-serif;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+
+              * {
+                box-sizing: border-box;
+              }
+
+              ${RECEIPT_CSS}
+
+              @media print {
+                #thermal-receipt-container {
+                  display: block !important;
+                  position: static !important;
+                  width: 72mm !important;
+                  max-width: 100% !important;
+                  height: auto !important;
+                  margin: 0 auto !important;
+                  padding: 2mm !important;
+                  visibility: visible !important;
+                  background: #ffffff !important;
+                  color: #000000 !important;
+                  overflow: visible !important;
+                }
+
+                #thermal-receipt-container * {
+                  visibility: visible !important;
+                  color: #000000 !important;
+                  opacity: 1 !important;
+                  text-shadow: none !important;
+                }
+              }
+            </style>
+          </head>
+
+          <body></body>
+        </html>
+      `);
+
+      printDocument.close();
+
+      // Copy only receipt content
+      const receiptClone = printDocument.importNode(
+        receipt,
+        true
+      );
+
+      printDocument.body.appendChild(receiptClone);
+
+      // Wait for fonts and rendering
+      await printDocument.fonts.ready;
+
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve());
+        });
+      });
+
+      // Verify receipt has content before printing
+      if (!printDocument.body.textContent?.trim()) {
+        throw new Error('Receipt content is empty.');
+      }
+
+      // Cleanup after print dialog closes
+      printWindow.addEventListener(
+        'afterprint',
+        () => {
+          setTimeout(cleanup, 500);
+        },
+        { once: true }
+      );
+
+      printWindow.focus();
+      printWindow.print();
+
+      // Fallback allows printing again if afterprint is missed
+      setIsPrinting(false);
+
+    } catch (error) {
+      console.error('Receipt printing failed:', error);
+
+      cleanup();
+
+      alert(
+        'Receipt printing failed. Please try again.'
+      );
+    }
+  };
+
+  // ==========================================
+  // CART FUNCTIONS
+  // ==========================================
+
+  const addToCart = (product: any) => {
+    const unitPrice = Number(product.salePrice);
+
+    setCart((previousCart) => {
+      const existing = previousCart.find(
+        (item) => item.productId === product.id
+      );
+
+      if (existing) {
+        return previousCart.map((item) =>
           item.productId === product.id
             ? {
                 ...item,
                 qty: item.qty + 1,
-                totalPrice: (item.qty + 1) * item.unitPrice,
+                totalPrice:
+                  (item.qty + 1) * item.unitPrice,
               }
             : item
-        )
-      );
-    } else {
-      setCart([
-        ...cart,
+        );
+      }
+
+      return [
+        ...previousCart,
         {
           productId: product.id,
           name: product.name,
           unitCode: product.unit?.shortCode || 'm',
-          unitPrice: product.salePrice,
+          unitPrice,
           qty: 1,
-          totalPrice: product.salePrice,
+          totalPrice: unitPrice,
         },
-      ]);
-    }
+      ];
+    });
   };
 
-  // Update quantity
-  const updateQty = (productId: string, qty: number) => {
+  const updateQty = (
+    productId: string,
+    qty: number
+  ) => {
+    if (!Number.isFinite(qty)) return;
+
     if (qty <= 0) {
       removeFromCart(productId);
-    } else {
-      setCart(
-        cart.map((item) =>
-          item.productId === productId
-            ? {
-                ...item,
-                qty,
-                totalPrice: qty * item.unitPrice,
-              }
-            : item
-        )
-      );
+      return;
     }
-  };
 
-  // Remove product
-  const removeFromCart = (productId: string) => {
-    setCart(
-      cart.filter((item) => item.productId !== productId)
+    setCart((previousCart) =>
+      previousCart.map((item) =>
+        item.productId === productId
+          ? {
+              ...item,
+              qty,
+              totalPrice: qty * item.unitPrice,
+            }
+          : item
+      )
     );
   };
 
-  // Clear cart
+  const removeFromCart = (productId: string) => {
+    setCart((previousCart) =>
+      previousCart.filter(
+        (item) => item.productId !== productId
+      )
+    );
+  };
+
   const clearCart = () => {
     setCart([]);
     localStorage.removeItem('pos_cart');
   };
 
-  // Calculations
+  // ==========================================
+  // CALCULATIONS
+  // ==========================================
+
   const subtotal = cart.reduce(
-    (sum, item) => sum + item.totalPrice,
+    (sum, item) => sum + Number(item.totalPrice),
     0
   );
 
@@ -157,7 +580,7 @@ export default function PosClient({
 
   const calculatedAdvance =
     paymentType === 'INSTALLMENT'
-      ? Math.min(advanceAmount, netTotal)
+      ? Math.max(0, Math.min(advanceAmount, netTotal))
       : 0;
 
   const remainingBalance =
@@ -165,7 +588,10 @@ export default function PosClient({
       ? Math.max(0, netTotal - calculatedAdvance)
       : 0;
 
-  // Quick customer registration
+  // ==========================================
+  // QUICK CUSTOMER REGISTRATION
+  // ==========================================
+
   const handleQuickCustomerSubmit = async (
     e: React.FormEvent
   ) => {
@@ -176,20 +602,30 @@ export default function PosClient({
     formData.append('name', custName);
     formData.append('phone', custPhone);
 
-    const newCust = await addCustomerQuick(formData);
+    try {
+      const newCust = await addCustomerQuick(formData);
 
-    if (newCust) {
-      customers.push(newCust);
-      setSelectedCustomer(newCust.id);
-      setIsCustomerModalOpen(false);
-      setCustName('');
-      setCustPhone('');
+      if (newCust) {
+        customers.push(newCust);
+
+        setSelectedCustomer(newCust.id);
+        setIsCustomerModalOpen(false);
+
+        setCustName('');
+        setCustPhone('');
+      }
+    } catch (error) {
+      console.error('Customer creation failed:', error);
+      alert('Unable to save customer.');
     }
   };
 
-  // Process checkout
+  // ==========================================
+  // CHECKOUT
+  // ==========================================
+
   const handleCheckout = async () => {
-    if (cart.length === 0) return;
+    if (cart.length === 0 || isCheckingOut) return;
 
     if (
       paymentType === 'INSTALLMENT' &&
@@ -201,56 +637,79 @@ export default function PosClient({
       return;
     }
 
-    const saleData = {
-      customerId: selectedCustomer || undefined,
+    setIsCheckingOut(true);
 
-      items: cart.map((c) => ({
-        productId: c.productId,
-        qty: c.qty,
-        unitPrice: c.unitPrice,
-        isSaleApplied: false,
-        totalPrice: c.totalPrice,
-      })),
+    try {
+      const saleData = {
+        customerId: selectedCustomer || undefined,
 
-      subtotal,
-      discountAmount: discount,
-      netTotal,
-      paymentType,
-      advancePaid: calculatedAdvance,
-      remainingAmount: remainingBalance,
-    };
+        items: cart.map((c) => ({
+          productId: c.productId,
+          qty: c.qty,
+          unitPrice: c.unitPrice,
+          isSaleApplied: false,
+          totalPrice: c.totalPrice,
+        })),
 
-    const res = await createSale(saleData);
+        subtotal,
+        discountAmount: discount,
+        netTotal,
+        paymentType,
+        advancePaid: calculatedAdvance,
+        remainingAmount: remainingBalance,
+      };
 
-    setCompletedSale({
-      ...res,
+      const res = await createSale(saleData);
 
-      items: cart,
+      setCompletedSale({
+        ...res,
 
-      customerName:
-        customers.find(
-          (c) => c.id === selectedCustomer
-        )?.name || null,
+        items: cart.map((item) => ({ ...item })),
 
-      advancePaid: calculatedAdvance,
-      remainingAmount: remainingBalance,
+        customerName:
+          customers.find(
+            (c) => c.id === selectedCustomer
+          )?.name || null,
 
-      receiptDate: new Date().toISOString(),
-    });
+        subtotal,
+        discountAmount: discount,
+        netTotal,
+        paymentType,
+        advancePaid: calculatedAdvance,
+        remainingAmount: remainingBalance,
 
-    clearCart();
-    setDiscount(0);
-    setAdvanceAmount(0);
-    setSelectedCustomer('');
+        receiptDate: new Date().toISOString(),
+      });
+
+      clearCart();
+
+      setDiscount(0);
+      setAdvanceAmount(0);
+      setSelectedCustomer('');
+      setPaymentType('CASH');
+
+    } catch (error) {
+      console.error('Checkout failed:', error);
+
+      alert(
+        'Sale could not be completed. Please verify the sale before trying again.'
+      );
+
+    } finally {
+      setIsCheckingOut(false);
+    }
   };
 
-  // Filter products
+  // ==========================================
+  // FILTER PRODUCTS
+  // ==========================================
+
   const filteredProducts = products.filter(
     (p) =>
-      p.name
+      String(p.name || '')
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
-      p.code
+      String(p.code || '')
         .toLowerCase()
         .includes(searchTerm.toLowerCase())
   );
@@ -258,295 +717,15 @@ export default function PosClient({
   return (
     <div className="min-h-screen bg-slate-50 p-6">
 
-      {/* ==========================================
-          PROFESSIONAL 80MM THERMAL RECEIPT CSS
-      ========================================== */}
+      {/* Receipt preview styles */}
 
-      <style jsx global>{`
-        #thermal-receipt-container {
-          width: 72mm;
-          max-width: 100%;
-          box-sizing: border-box;
-          margin: 0 auto;
-          padding: 2mm 1mm;
-          background: #ffffff;
-          color: #000000;
-          font-family: Arial, Helvetica, sans-serif;
-          font-size: 14px;
-          font-weight: 700;
-          line-height: 1.4;
-          font-variant-numeric: tabular-nums;
-        }
-
-        #thermal-receipt-container * {
-          box-sizing: border-box;
-          color: #000000 !important;
-          opacity: 1 !important;
-          text-shadow: none !important;
-        }
-
-        .receipt-header {
-          text-align: center;
-          padding-bottom: 10px;
-        }
-
-        .receipt-shop-name {
-          font-family: Arial, Helvetica, sans-serif;
-          font-size: 25px;
-          font-weight: 900;
-          line-height: 1.15;
-          text-transform: uppercase;
-          margin: 0 0 8px;
-          overflow-wrap: anywhere;
-        }
-
-        .receipt-shop-info {
-          font-size: 13px;
-          font-weight: 700;
-          line-height: 1.4;
-          margin: 3px 0;
-          overflow-wrap: anywhere;
-        }
-
-        .receipt-title {
-          text-align: center;
-          font-size: 17px;
-          font-weight: 900;
-          padding: 7px 0;
-          margin-bottom: 10px;
-          border-top: 2px dashed #000000;
-          border-bottom: 2px dashed #000000;
-        }
-
-        .receipt-details {
-          margin-bottom: 10px;
-        }
-
-        .receipt-row {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 8px;
-          margin: 5px 0;
-          font-size: 13px;
-          font-weight: 700;
-        }
-
-        .receipt-row > span:first-child {
-          flex: 1;
-          min-width: 0;
-        }
-
-        .receipt-row > span:last-child {
-          text-align: right;
-          font-weight: 700;
-          max-width: 65%;
-          overflow-wrap: anywhere;
-        }
-
-        .receipt-divider {
-          border: 0;
-          border-top: 2px dashed #000000;
-          margin: 10px 0;
-        }
-
-        .receipt-table {
-          width: 100%;
-          table-layout: fixed;
-          border-collapse: collapse;
-          font-size: 14px;
-        }
-
-        .receipt-table thead th {
-          padding: 7px 0;
-          font-size: 13px;
-          font-weight: 900;
-          border-top: 2px solid #000000;
-          border-bottom: 2px solid #000000;
-        }
-
-        .receipt-table tbody td {
-          padding: 9px 0;
-          font-size: 14px;
-          font-weight: 700;
-          vertical-align: top;
-          border-bottom: 1px dashed #000000;
-          overflow-wrap: anywhere;
-        }
-
-        .receipt-item-name {
-          font-size: 14px;
-          font-weight: 700;
-          line-height: 1.3;
-          padding-right: 5px;
-          overflow-wrap: anywhere;
-        }
-
-        .receipt-item-rate {
-          font-size: 12px;
-          font-weight: 700;
-          margin-top: 4px;
-          line-height: 1.3;
-        }
-
-        .receipt-totals {
-          padding: 8px 0 0;
-        }
-
-        .receipt-net-total {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 6px;
-          padding: 10px 0;
-          margin: 10px 0;
-          border-top: 2px solid #000000;
-          border-bottom: 2px solid #000000;
-          font-size: 19px;
-          font-weight: 900;
-          line-height: 1.25;
-        }
-
-        .receipt-net-total > span:last-child {
-          text-align: right;
-          overflow-wrap: anywhere;
-          min-width: 0;
-        }
-
-        .receipt-payment-row {
-          font-size: 14px;
-          font-weight: 700;
-          margin: 7px 0;
-        }
-
-        .receipt-balance {
-          font-size: 16px;
-          font-weight: 900;
-          padding: 7px 0;
-          border-top: 1px dashed #000000;
-          margin-top: 7px;
-        }
-
-        .receipt-footer {
-          text-align: center;
-          font-size: 13px;
-          font-weight: 700;
-          border-top: 2px dashed #000000;
-          padding-top: 12px;
-          padding-bottom: 3mm;
-          margin-top: 12px;
-          overflow-wrap: anywhere;
-        }
-
-        .receipt-footer-message {
-          font-size: 14px;
-          font-weight: 700;
-          line-height: 1.4;
-        }
-
-        .receipt-footer-visit {
-          font-size: 12px;
-          font-weight: 700;
-          margin-top: 4px;
-        }
-
-        @page {
-          size: auto;
-          margin: 0;
-        }
-
-        @media print {
-          html:has(.receipt-print-modal),
-          body:has(.receipt-print-modal) {
-            width: 100% !important;
-            height: auto !important;
-            min-height: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #ffffff !important;
-            overflow: visible !important;
-          }
-
-          body:has(.receipt-print-modal)
-            > *:not(.receipt-print-modal) {
-            display: none !important;
-          }
-
-          .receipt-print-modal {
-            display: block !important;
-            position: static !important;
-            inset: auto !important;
-            width: 100% !important;
-            height: auto !important;
-            min-height: 0 !important;
-            max-height: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #ffffff !important;
-            backdrop-filter: none !important;
-            overflow: visible !important;
-          }
-
-          .receipt-modal-inner {
-            display: block !important;
-            position: static !important;
-            width: 100% !important;
-            max-width: none !important;
-            height: auto !important;
-            max-height: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
-            background: #ffffff !important;
-            overflow: visible !important;
-          }
-
-          .receipt-actions {
-            display: none !important;
-          }
-
-          #thermal-receipt-container {
-            display: block !important;
-            position: static !important;
-            width: 72mm !important;
-            max-width: 100% !important;
-            box-sizing: border-box !important;
-            margin: 0 auto !important;
-            padding: 1mm !important;
-            height: auto !important;
-            border: none !important;
-            box-shadow: none !important;
-            background: #ffffff !important;
-            color: #000000 !important;
-            font-family: Arial, Helvetica, sans-serif !important;
-            font-size: 14px !important;
-            font-weight: 700 !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-
-          #thermal-receipt-container * {
-            color: #000000 !important;
-            opacity: 1 !important;
-            text-shadow: none !important;
-            box-shadow: none !important;
-          }
-
-          .receipt-table tr,
-          .receipt-header,
-          .receipt-net-total,
-          .receipt-footer {
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-        }
-      `}</style>
+      <style jsx global>{RECEIPT_CSS}</style>
 
       {/* PAGE HEADER */}
+
       <div className="mb-6">
         <div className="flex items-center justify-between">
+
           <div>
             <h1 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
               <Store className="w-6 h-6 text-indigo-600" />
@@ -560,6 +739,7 @@ export default function PosClient({
 
           <div className="flex items-center gap-3">
             <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200/60">
+
               <span className="text-xs text-slate-500">
                 Today's Sales
               </span>
@@ -567,19 +747,25 @@ export default function PosClient({
               <p className="text-sm font-bold text-emerald-600">
                 Rs. 12,450
               </p>
+
             </div>
           </div>
+
         </div>
       </div>
 
       {/* MAIN POS GRID */}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         {/* PRODUCT SECTION */}
+
         <div className="lg:col-span-7 space-y-4">
 
           {/* SEARCH BAR */}
+
           <div className="relative">
+
             <Search className="w-4 h-4 absolute left-4 top-3.5 text-slate-400" />
 
             <input
@@ -594,18 +780,22 @@ export default function PosClient({
 
             {searchTerm && (
               <button
+                type="button"
                 onClick={() => setSearchTerm('')}
                 className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
               >
                 <X className="w-4 h-4" />
               </button>
             )}
+
           </div>
 
-          {/* PRODUCTS GRID */}
+          {/* PRODUCT GRID */}
+
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
 
             {filteredProducts.length === 0 ? (
+
               <div className="col-span-full text-center py-12 bg-white rounded-xl border border-slate-200/60">
 
                 <Package className="w-12 h-12 text-slate-300 mx-auto mb-2" />
@@ -619,7 +809,9 @@ export default function PosClient({
                 </p>
 
               </div>
+
             ) : (
+
               filteredProducts.map((p) => (
 
                 <div
@@ -629,6 +821,7 @@ export default function PosClient({
                 >
 
                   <div>
+
                     <div className="flex items-start justify-between mb-1">
 
                       <p className="font-semibold text-slate-800 text-sm line-clamp-1 group-hover:text-indigo-600 transition-colors">
@@ -639,18 +832,18 @@ export default function PosClient({
 
                     {p.category?.name && (
                       <span className="inline-block text-[10px] font-medium text-indigo-600 bg-indigo-50/80 px-2 py-0.5 rounded-md mb-2 border border-indigo-100/50">
-
                         {p.category.name}
-
                       </span>
                     )}
+
                   </div>
 
                   <div>
+
                     <div className="flex items-center justify-between mt-2">
 
                       <p className="font-bold text-indigo-600 text-sm">
-                        Rs. {p.salePrice}
+                        Rs. {formatAmount(p.salePrice)}
                       </p>
 
                       <span
@@ -666,7 +859,10 @@ export default function PosClient({
 
                     </div>
 
-                    <button className="mt-3 w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold py-1.5 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                    <button
+                      type="button"
+                      className="mt-3 w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold py-1.5 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    >
 
                       <Plus className="w-3 h-3 inline mr-1" />
                       Add to Cart
@@ -674,22 +870,29 @@ export default function PosClient({
                     </button>
 
                   </div>
+
                 </div>
+
               ))
+
             )}
 
           </div>
+
         </div>
 
         {/* CHECKOUT SECTION */}
+
         <div className="lg:col-span-5">
 
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-5 space-y-4 sticky top-6">
 
             {/* CART HEADER */}
+
             <div className="flex justify-between items-center border-b border-slate-200/60 pb-4">
 
               <div>
+
                 <h2 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
 
                   <ShoppingCart className="w-4 h-4 text-indigo-600" />
@@ -705,6 +908,7 @@ export default function PosClient({
 
               {cart.length > 0 && (
                 <button
+                  type="button"
                   onClick={clearCart}
                   className="text-xs text-rose-600 hover:text-rose-700 font-medium bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg transition-all"
                 >
@@ -715,9 +919,11 @@ export default function PosClient({
             </div>
 
             {/* CART ITEMS */}
+
             <div className="space-y-2 max-h-[280px] overflow-y-auto">
 
               {cart.length === 0 ? (
+
                 <div className="text-center py-12">
 
                   <ShoppingCart className="w-12 h-12 text-slate-200 mx-auto mb-2" />
@@ -731,7 +937,9 @@ export default function PosClient({
                   </p>
 
                 </div>
+
               ) : (
+
                 cart.map((item) => (
 
                   <div
@@ -748,7 +956,9 @@ export default function PosClient({
                         </p>
 
                         <p className="text-[11px] text-slate-500 font-mono">
-                          Rs. {item.unitPrice} / {item.unitCode}
+                          Rs. {formatAmount(item.unitPrice)}
+                          {' / '}
+                          {item.unitCode}
                         </p>
 
                       </div>
@@ -801,7 +1011,7 @@ export default function PosClient({
 
                         <span className="font-mono text-emerald-600 font-bold text-sm min-w-[70px] text-right">
 
-                          Rs. {item.totalPrice}
+                          Rs. {formatAmount(item.totalPrice)}
 
                         </span>
 
@@ -816,17 +1026,23 @@ export default function PosClient({
                         </button>
 
                       </div>
+
                     </div>
+
                   </div>
+
                 ))
+
               )}
 
             </div>
 
             {/* CUSTOMER AND PAYMENT */}
+
             <div className="border-t border-slate-200/60 pt-4 space-y-3">
 
               {/* CUSTOMER SELECTION */}
+
               <div>
 
                 <label className="text-xs font-medium text-slate-600 mb-1.5 flex items-center gap-1.5">
@@ -847,7 +1063,7 @@ export default function PosClient({
                   >
 
                     <option value="">
-                      🚶 Walking Customer
+                      Walking Customer
                     </option>
 
                     {customers.map((c) => (
@@ -873,10 +1089,13 @@ export default function PosClient({
                     New
 
                   </button>
+
                 </div>
+
               </div>
 
-              {/* PAYMENT TYPE */}
+              {/* PAYMENT METHOD */}
+
               <div>
 
                 <label className="text-xs font-medium text-slate-600 mb-1.5 flex items-center gap-1.5">
@@ -890,9 +1109,7 @@ export default function PosClient({
 
                   <button
                     type="button"
-                    onClick={() =>
-                      setPaymentType('CASH')
-                    }
+                    onClick={() => setPaymentType('CASH')}
                     className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
                       paymentType === 'CASH'
                         ? 'bg-emerald-50 border-emerald-300 text-emerald-700 shadow-sm'
@@ -923,9 +1140,11 @@ export default function PosClient({
                   </button>
 
                 </div>
+
               </div>
 
               {/* ADVANCE PAYMENT */}
+
               {paymentType === 'INSTALLMENT' && (
 
                 <div className="bg-amber-50/50 border border-amber-200/60 p-3 rounded-xl">
@@ -947,7 +1166,10 @@ export default function PosClient({
                       placeholder="0"
                       onChange={(e) =>
                         setAdvanceAmount(
-                          parseFloat(e.target.value) || 0
+                          Math.max(
+                            0,
+                            parseFloat(e.target.value) || 0
+                          )
                         )
                       }
                       className="w-32 bg-white border border-amber-200/60 rounded-lg px-3 py-1.5 text-right font-mono text-amber-800 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
@@ -956,19 +1178,24 @@ export default function PosClient({
                   </div>
 
                   <p className="text-[10px] text-amber-600 mt-1">
-                    Max advance: Rs. {netTotal}
+                    Max advance: Rs. {formatAmount(netTotal)}
                   </p>
 
                 </div>
+
               )}
 
               {/* CALCULATIONS */}
+
               <div className="space-y-1.5 text-xs font-mono bg-slate-50 p-3 rounded-xl border border-slate-200/60">
 
                 <div className="flex justify-between text-slate-600">
 
                   <span>Subtotal:</span>
-                  <span>Rs. {subtotal.toLocaleString()}</span>
+
+                  <span>
+                    Rs. {formatAmount(subtotal)}
+                  </span>
 
                 </div>
 
@@ -978,11 +1205,15 @@ export default function PosClient({
 
                   <input
                     type="number"
+                    min="0"
                     value={discount || ''}
                     placeholder="0"
                     onChange={(e) =>
                       setDiscount(
-                        parseFloat(e.target.value) || 0
+                        Math.max(
+                          0,
+                          parseFloat(e.target.value) || 0
+                        )
                       )
                     }
                     className="w-24 bg-white border border-slate-200/60 rounded-lg px-2 py-1 text-right font-mono text-slate-800 text-xs focus:outline-none focus:border-indigo-400"
@@ -993,18 +1224,22 @@ export default function PosClient({
                 <div className="flex justify-between text-sm font-bold text-emerald-600 pt-2 border-t border-slate-200/60">
 
                   <span>Net Total:</span>
-                  <span>Rs. {netTotal.toLocaleString()}</span>
+
+                  <span>
+                    Rs. {formatAmount(netTotal)}
+                  </span>
 
                 </div>
 
                 {paymentType === 'INSTALLMENT' && (
                   <>
+
                     <div className="flex justify-between text-xs text-emerald-600 pt-1 border-t border-slate-200/60">
 
                       <span>Advance Received:</span>
 
                       <span>
-                        Rs. {calculatedAdvance.toLocaleString()}
+                        Rs. {formatAmount(calculatedAdvance)}
                       </span>
 
                     </div>
@@ -1014,31 +1249,39 @@ export default function PosClient({
                       <span>Balance Due:</span>
 
                       <span>
-                        Rs. {remainingBalance.toLocaleString()}
+                        Rs. {formatAmount(remainingBalance)}
                       </span>
 
                     </div>
+
                   </>
                 )}
 
               </div>
+
             </div>
 
             {/* CHECKOUT BUTTON */}
+
             <button
               type="button"
-              disabled={cart.length === 0}
+              disabled={cart.length === 0 || isCheckingOut}
               onClick={handleCheckout}
               className="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl text-sm transition-all shadow-lg shadow-indigo-200/50 hover:shadow-indigo-300/50 flex items-center justify-center gap-2"
             >
 
               <BadgeCheck className="w-4 h-4" />
-              Complete Sale & Generate Bill
+
+              {isCheckingOut
+                ? 'Processing Sale...'
+                : 'Complete Sale & Generate Bill'}
 
             </button>
 
           </div>
+
         </div>
+
       </div>
 
       {/* ==========================================
@@ -1061,6 +1304,7 @@ export default function PosClient({
               </h3>
 
               <button
+                type="button"
                 onClick={() =>
                   setIsCustomerModalOpen(false)
                 }
@@ -1103,55 +1347,77 @@ export default function PosClient({
                 type="submit"
                 className="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-indigo-200/50"
               >
+
                 Save & Select Customer
+
               </button>
 
             </form>
+
           </div>
+
         </div>
+
       )}
 
       {/* ==========================================
-          PROFESSIONAL THERMAL RECEIPT MODAL
+          PROFESSIONAL THERMAL RECEIPT
       ========================================== */}
 
       {completedSale &&
         createPortal(
 
-          <div className="receipt-print-modal fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
 
-            <div className="receipt-modal-inner bg-white rounded-2xl p-5 w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="bg-white rounded-2xl p-5 w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl">
 
-              {/* PRINTABLE RECEIPT */}
+              {/* RECEIPT START */}
+
               <div id="thermal-receipt-container">
 
                 {/* STORE HEADER */}
+
                 <div className="receipt-header">
 
                   <h2 className="receipt-shop-name">
-                    {settings?.storeName || 'FABRIC POS SHOP'}
+
+                    {settings?.storeName ||
+                      'FABRIC POS SHOP'}
+
                   </h2>
 
                   {settings?.address && (
+
                     <p className="receipt-shop-info">
+
                       {settings.address}
+
                     </p>
+
                   )}
 
                   {settings?.phone && (
+
                     <p className="receipt-shop-info">
+
                       Tel: {settings.phone}
+
                     </p>
+
                   )}
 
                 </div>
 
                 {/* RECEIPT TITLE */}
+
                 <div className="receipt-title">
+
                   SALES RECEIPT
+
                 </div>
 
-                {/* INVOICE INFORMATION */}
+                {/* INVOICE DETAILS */}
+
                 <div className="receipt-details">
 
                   <div className="receipt-row">
@@ -1169,10 +1435,12 @@ export default function PosClient({
                     <span>Date:</span>
 
                     <span>
+
                       {new Date(
                         completedSale.createdAt ||
                           completedSale.receiptDate
                       ).toLocaleDateString('en-GB')}
+
                     </span>
 
                   </div>
@@ -1182,6 +1450,7 @@ export default function PosClient({
                     <span>Time:</span>
 
                     <span>
+
                       {new Date(
                         completedSale.createdAt ||
                           completedSale.receiptDate
@@ -1190,6 +1459,7 @@ export default function PosClient({
                         minute: '2-digit',
                         hour12: true,
                       })}
+
                     </span>
 
                   </div>
@@ -1199,8 +1469,10 @@ export default function PosClient({
                     <span>Customer:</span>
 
                     <span>
+
                       {completedSale.customerName ||
                         'Walk-in Customer'}
+
                     </span>
 
                   </div>
@@ -1210,19 +1482,24 @@ export default function PosClient({
                     <span>Payment:</span>
 
                     <span>
-                      {completedSale.paymentType === 'INSTALLMENT'
+
+                      {completedSale.paymentType ===
+                      'INSTALLMENT'
                         ? 'UDHAAR / KHATA'
                         : 'CASH'}
+
                     </span>
 
                   </div>
 
                 </div>
 
-                {/* PRODUCT ITEMS TABLE */}
+                {/* PRODUCT ITEMS */}
+
                 <table className="receipt-table">
 
                   <thead>
+
                     <tr>
 
                       <th
@@ -1236,7 +1513,7 @@ export default function PosClient({
 
                       <th
                         style={{
-                          width: '22%',
+                          width: '20%',
                           textAlign: 'center',
                         }}
                       >
@@ -1245,7 +1522,7 @@ export default function PosClient({
 
                       <th
                         style={{
-                          width: '33%',
+                          width: '35%',
                           textAlign: 'right',
                         }}
                       >
@@ -1253,6 +1530,7 @@ export default function PosClient({
                       </th>
 
                     </tr>
+
                   </thead>
 
                   <tbody>
@@ -1299,13 +1577,15 @@ export default function PosClient({
                         </td>
 
                       </tr>
+
                     ))}
 
                   </tbody>
 
                 </table>
 
-                {/* TOTAL AMOUNTS */}
+                {/* TOTALS */}
+
                 <div className="receipt-totals">
 
                   <div className="receipt-row">
@@ -1323,7 +1603,9 @@ export default function PosClient({
                     <span>Subtotal:</span>
 
                     <span>
+
                       Rs. {formatAmount(completedSale.subtotal)}
+
                     </span>
 
                   </div>
@@ -1335,28 +1617,36 @@ export default function PosClient({
                       <span>Discount:</span>
 
                       <span>
+
                         -Rs.{' '}
                         {formatAmount(
                           completedSale.discountAmount
                         )}
+
                       </span>
 
                     </div>
+
                   )}
 
-                  {/* GRAND TOTAL */}
+                  {/* NET TOTAL */}
+
                   <div className="receipt-net-total">
 
                     <span>NET TOTAL</span>
 
                     <span>
+
                       Rs. {formatAmount(completedSale.netTotal)}
+
                     </span>
 
                   </div>
 
-                  {/* FULL CASH PAYMENT */}
+                  {/* NORMAL CASH CUSTOMER */}
+
                   {completedSale.paymentType === 'CASH' && (
+
                     <>
 
                       <div className="receipt-row receipt-payment-row">
@@ -1364,25 +1654,29 @@ export default function PosClient({
                         <span>Cash Paid:</span>
 
                         <span>
+
                           Rs.{' '}
                           {formatAmount(completedSale.netTotal)}
+
                         </span>
 
                       </div>
 
-                      <div className="receipt-row receipt-payment-row">
+                      <div className="receipt-payment-status">
 
-                        <span>Balance Due:</span>
-
-                        <span>Rs. 0</span>
+                        FULLY PAID
 
                       </div>
 
                     </>
+
                   )}
 
-                  {/* UDHAAR / KHATA PAYMENT */}
-                  {completedSale.paymentType === 'INSTALLMENT' && (
+                  {/* UDHAAR / KHATA CUSTOMER */}
+
+                  {completedSale.paymentType ===
+                    'INSTALLMENT' && (
+
                     <>
 
                       <div className="receipt-row receipt-payment-row">
@@ -1390,8 +1684,12 @@ export default function PosClient({
                         <span>Advance Paid:</span>
 
                         <span>
+
                           Rs.{' '}
-                          {formatAmount(completedSale.advancePaid)}
+                          {formatAmount(
+                            completedSale.advancePaid
+                          )}
+
                         </span>
 
                       </div>
@@ -1401,20 +1699,38 @@ export default function PosClient({
                         <span>Khata Due:</span>
 
                         <span>
+
                           Rs.{' '}
                           {formatAmount(
                             completedSale.remainingAmount
                           )}
+
                         </span>
 
                       </div>
 
+                      <div className="receipt-payment-status">
+
+                        {Number(
+                          completedSale.remainingAmount
+                        ) <= 0
+                          ? 'FULLY PAID'
+                          : Number(
+                                completedSale.advancePaid
+                              ) > 0
+                            ? 'PARTIALLY PAID'
+                            : 'UNPAID / KHATA'}
+
+                      </div>
+
                     </>
+
                   )}
 
                 </div>
 
                 {/* RECEIPT FOOTER */}
+
                 <div className="receipt-footer">
 
                   <p className="receipt-footer-message">
@@ -1425,24 +1741,33 @@ export default function PosClient({
                   </p>
 
                   <p className="receipt-footer-visit">
+
                     Please visit again!
+
                   </p>
 
                 </div>
 
               </div>
 
-              {/* ACTION BUTTONS - HIDDEN ON PRINT */}
-              <div className="receipt-actions flex gap-2 mt-5">
+              {/* RECEIPT END */}
+
+              {/* MODAL ACTIONS */}
+
+              <div className="flex gap-2 mt-5">
 
                 <button
                   type="button"
-                  onClick={() => window.print()}
-                  className="flex-1 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-bold py-3 px-3 rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-200/50"
+                  disabled={isPrinting}
+                  onClick={handlePrintReceipt}
+                  className="flex-1 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 px-3 rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-200/50"
                 >
 
                   <Printer className="w-4 h-4" />
-                  Print Receipt
+
+                  {isPrinting
+                    ? 'Preparing Receipt...'
+                    : 'Print Receipt'}
 
                 </button>
 
@@ -1451,14 +1776,19 @@ export default function PosClient({
                   onClick={() => setCompletedSale(null)}
                   className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-5 py-3 rounded-xl text-sm transition-all"
                 >
+
                   Close
+
                 </button>
 
               </div>
+
             </div>
+
           </div>,
 
           document.body
+
         )}
 
     </div>
