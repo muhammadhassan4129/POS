@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "main": "main.js",
- "scripts": {
-    "dev": "next dev",
-    "build": "prisma generate && next build",
-    "start": "next start",
+  "scripts": {
+    "dev": "node init && next dev",
+    "build": "node init && prisma generate && next build",
+    "start": "node init && next start",
     "lint": "eslint",
     "postinstall": "prisma skills sync || exit 0",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
