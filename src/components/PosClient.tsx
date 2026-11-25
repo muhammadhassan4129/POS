@@ -474,6 +474,47 @@ export default function PosClient({
         { once: true }
       );
 
+      // Measure the receipt at the exact width used for printing.
+      receiptClone.style.width = '64mm';
+      receiptClone.style.maxWidth = '64mm';
+      receiptClone.style.margin = '0';
+      receiptClone.style.boxSizing = 'border-box';
+
+      const heightPx = Math.max(
+        receiptClone.scrollHeight,
+        receiptClone.getBoundingClientRect().height
+      );
+      if (!Number.isFinite(heightPx) || heightPx <= 0) {
+        throw new Error('Unable to measure receipt height.');
+      }
+
+      // CSS uses 96 pixels per inch. Allow 3mm for rounding/feed.
+      const heightMm = Math.ceil(heightPx * 25.4 / 96) + 3;
+      const pageStyle = printDocument.createElement('style');
+      pageStyle.textContent = `
+        @page {
+          size: 80mm ${heightMm}mm;
+          margin: 0;
+        }
+        @media print {
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            min-height: 0 !important;
+            height: auto !important;
+          }
+          #thermal-receipt-container {
+            width: 64mm !important;
+            max-width: 64mm !important;
+            margin: 0 !important;
+            height: auto !important;
+            min-height: 0 !important;
+          }
+        }
+      `;
+      printDocument.head.appendChild(pageStyle);
+      console.info('Requested receipt paper size:', `80 x ${heightMm} mm`);
+
       printWindow.focus();
       printWindow.print();
 
